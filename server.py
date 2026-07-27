@@ -1,25 +1,3 @@
-"""
-server.py
-
-A small FastAPI server that runs the trained skin classifier and
-requires an API key for access -- so only your team (people you give
-the key to) can call it.
-
-Usage:
-    pip install fastapi uvicorn python-multipart timm torch torchvision pillow
-    python server.py
-
-Then share:
-  - The ngrok URL (changes each time you restart ngrok, unless you're on
-    a paid plan)
-  - The API_KEY value below (generate your own, don't use the placeholder)
-
-Your team calls it like:
-    curl -X POST "https://your-ngrok-url.ngrok-free.app/predict" \
-         -H "X-API-Key: YOUR_KEY_HERE" \
-         -F "file=@photo.jpg"
-"""
-
 import io
 import os
 
@@ -33,12 +11,7 @@ from torchvision import transforms
 
 from disease_codes import NAME_TO_CODE
 
-# ---------------------------------------------------------------------
-# CHANGE THIS -- generate your own random key, don't use this placeholder.
-# A simple way: run this in Python once and paste the result here:
-#   import secrets; print(secrets.token_urlsafe(32))
-# ---------------------------------------------------------------------
-API_KEY = "CHANGE_ME_TO_A_RANDOM_STRING"
+API_KEY = "EWKUDGdtXtu25qO-fWM98Z0AJVeH80LkVqeJ4m1OeEQ"
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "skin_effnetv2_b2.pt")
 
@@ -46,9 +19,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 app = FastAPI(title="RashAI Inference Server")
 
-# ---------------------------------------------------------------------
-# Load model once at startup, not per-request
-# ---------------------------------------------------------------------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 print(f"Loading model from {MODEL_PATH}...")
 checkpoint = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=False)
 CLASS_NAMES = checkpoint["class_names"]
@@ -99,7 +76,6 @@ async def predict(file: UploadFile = File(...), x_api_key: str = Header(None)):
 
 
 if __name__ == "__main__":
-    import os
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
